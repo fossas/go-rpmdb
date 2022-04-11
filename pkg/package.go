@@ -3,8 +3,10 @@ package rpmdb
 import (
 	"bytes"
 	"encoding/binary"
-	"golang.org/x/xerrors"
+
 	"strings"
+
+	"golang.org/x/xerrors"
 )
 
 type PackageInfo struct {
@@ -32,58 +34,9 @@ type FileInfo struct {
 }
 
 const (
-	// rpmTag_e
-	// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.11.3-release/lib/rpmtag.h#L28
-	RPMTAG_NAME           = 1000 /* s */
-	RPMTAG_VERSION        = 1001 /* s */
-	RPMTAG_RELEASE        = 1002 /* s */
-	RPMTAG_EPOCH          = 1003 /* i */
-	RPMTAG_ARCH           = 1022 /* s */
-	RPMTAG_SOURCERPM      = 1044 /* s */
-	RPMTAG_SIZE           = 1009 /* i */
-	RPMTAG_LICENSE        = 1014 /* s */
-	RPMTAG_VENDOR         = 1011 /* s */
-	RPMTAG_DIRINDEXES     = 1116 /* i[] */
-	RPMTAG_BASENAMES      = 1117 /* s[] */
-	RPMTAG_DIRNAMES       = 1118 /* s[] */
-	RPMTAG_FILESIZES      = 1028 /* i[] */
-	RPMTAG_FILEMODES      = 1030 /* h[] , specifically []uint16 (ref https://github.com/rpm-software-management/rpm/blob/2153fa4ae51a84547129b8ebb3bb396e1737020e/lib/rpmtypes.h#L53 )*/
-	RPMTAG_FILEDIGESTS    = 1035 /* s[] */
-	RPMTAG_FILEFLAGS      = 1037 /* i[] */
-	RPMTAG_FILEUSERNAME   = 1039 /* s[] */
-	RPMTAG_FILEGROUPNAME  = 1040 /* s[] */
-	RPMTAG_FILEDIGESTALGO = 5011 /* i  */
-
-	//rpmTagType_e
-	// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.11.3-release/lib/rpmtag.h#L362
-	RPM_NULL_TYPE         = 0
-	RPM_CHAR_TYPE         = 1
-	RPM_INT8_TYPE         = 2
-	RPM_INT16_TYPE        = 3
-	RPM_INT32_TYPE        = 4
-	RPM_INT64_TYPE        = 5
-	RPM_STRING_TYPE       = 6
-	RPM_BIN_TYPE          = 7
-	RPM_STRING_ARRAY_TYPE = 8
-	RPM_I18NSTRING_TYPE   = 9
-)
-
-const (
 	sizeOfInt32  = 4
 	sizeOfUInt16 = 2
 )
-
-func parseStringArray(data []byte) []string {
-	elements := strings.Split(string(data), "\x00")
-	if len(elements) > 0 && elements[len(elements)-1] == "" {
-		return elements[:len(elements)-1]
-	}
-	return elements
-}
-
-func parseString(data []byte) string {
-	return string(bytes.TrimRight(data, "\x00"))
-}
 
 func parseInt32(data []byte) (int, error) {
 	var value int32
@@ -92,6 +45,14 @@ func parseInt32(data []byte) (int, error) {
 		return 0, xerrors.Errorf("failed to read binary: %w", err)
 	}
 	return int(value), nil
+}
+
+func parseStringArray(data []byte) []string {
+	elements := strings.Split(string(data), "\x00")
+	if len(elements) > 0 && elements[len(elements)-1] == "" {
+		return elements[:len(elements)-1]
+	}
+	return elements
 }
 
 func parseInt32Array(data []byte, arraySize int) ([]int32, error) {
@@ -114,92 +75,90 @@ func parseUInt16Array(data []byte, arraySize int) ([]uint16, error) {
 	return values, nil
 }
 
-// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.11.3-release/lib/tagexts.c#L649
-func newPackage(indexEntries []indexEntry) (*PackageInfo, error) {
+// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.14.3-release/lib/tagexts.c#L752
+func getNEVRA(indexEntries []indexEntry) (*PackageInfo, error) {
 	pkgInfo := &PackageInfo{}
-	var err error
-
-	for _, entry := range indexEntries {
-		switch entry.Info.Tag {
+	for _, ie := range indexEntries {
+		switch ie.Info.Tag {
 		case RPMTAG_NAME:
-			if entry.Info.Type != RPM_STRING_TYPE {
+			if ie.Info.Type != RPM_STRING_TYPE {
 				return nil, xerrors.New("invalid tag name")
 			}
-			pkgInfo.Name = parseString(entry.Data)
+			pkgInfo.Name = string(bytes.TrimRight(ie.Data, "\x00"))
 		case RPMTAG_EPOCH:
-			if entry.Info.Type != RPM_INT32_TYPE {
+			if ie.Info.Type != RPM_INT32_TYPE {
 				return nil, xerrors.New("invalid tag epoch")
 			}
-
-			if entry.Data != nil {
-				value, err := parseInt32(entry.Data)
+			if ie.Data != nil {
+				value, err := parseInt32(ie.Data)
 				if err != nil {
 					return nil, xerrors.Errorf("failed to parse epoch: %w", err)
 				}
 				pkgInfo.Epoch = &value
 			}
-
 		case RPMTAG_VERSION:
-			if entry.Info.Type != RPM_STRING_TYPE {
+			if ie.Info.Type != RPM_STRING_TYPE {
 				return nil, xerrors.New("invalid tag version")
 			}
-			pkgInfo.Version = parseString(entry.Data)
+			pkgInfo.Version = string(bytes.TrimRight(ie.Data, "\x00"))
 		case RPMTAG_RELEASE:
-			if entry.Info.Type != RPM_STRING_TYPE {
+			if ie.Info.Type != RPM_STRING_TYPE {
 				return nil, xerrors.New("invalid tag release")
 			}
-			pkgInfo.Release = parseString(entry.Data)
+			pkgInfo.Release = string(bytes.TrimRight(ie.Data, "\x00"))
 		case RPMTAG_ARCH:
-			if entry.Info.Type != RPM_STRING_TYPE {
+			if ie.Info.Type != RPM_STRING_TYPE {
 				return nil, xerrors.New("invalid tag arch")
 			}
-			pkgInfo.Arch = parseString(entry.Data)
+			pkgInfo.Arch = string(bytes.TrimRight(ie.Data, "\x00"))
 		case RPMTAG_SOURCERPM:
-			if entry.Info.Type != RPM_STRING_TYPE {
+			if ie.Info.Type != RPM_STRING_TYPE {
 				return nil, xerrors.New("invalid tag sourcerpm")
 			}
-			pkgInfo.SourceRpm = parseString(entry.Data)
+			pkgInfo.SourceRpm = string(bytes.TrimRight(ie.Data, "\x00"))
 			if pkgInfo.SourceRpm == "(none)" {
 				pkgInfo.SourceRpm = ""
 			}
 		case RPMTAG_LICENSE:
-			if entry.Info.Type != RPM_STRING_TYPE {
+			if ie.Info.Type != RPM_STRING_TYPE {
 				return nil, xerrors.New("invalid tag license")
 			}
-			pkgInfo.License = parseString(entry.Data)
+			pkgInfo.License = string(bytes.TrimRight(ie.Data, "\x00"))
 			if pkgInfo.License == "(none)" {
 				pkgInfo.License = ""
 			}
 		case RPMTAG_VENDOR:
-			if entry.Info.Type != RPM_STRING_TYPE {
+			if ie.Info.Type != RPM_STRING_TYPE {
 				return nil, xerrors.New("invalid tag vendor")
 			}
-			pkgInfo.Vendor = parseString(entry.Data)
+			pkgInfo.Vendor = string(bytes.TrimRight(ie.Data, "\x00"))
 			if pkgInfo.Vendor == "(none)" {
 				pkgInfo.Vendor = ""
 			}
 		case RPMTAG_SIZE:
-			if entry.Info.Type != RPM_INT32_TYPE {
+			if ie.Info.Type != RPM_INT32_TYPE {
 				return nil, xerrors.New("invalid tag size")
 			}
 
-			pkgInfo.Size, err = parseInt32(entry.Data)
-			if err != nil {
-				return nil, xerrors.Errorf("failed to parse size: %w", err)
+			var size int32
+			reader := bytes.NewReader(ie.Data)
+			if err := binary.Read(reader, binary.BigEndian, &size); err != nil {
+				return nil, xerrors.Errorf("failed to read binary (size): %w", err)
 			}
+			pkgInfo.Size = int(size)
 		case RPMTAG_FILEDIGESTALGO:
 			// note: all digests within a package entry only supports a single digest algorithm (there may be future support for
 			// algorithm noted for each file entry, but currently unimplemented: https://github.com/rpm-software-management/rpm/blob/0b75075a8d006c8f792d33a57eae7da6b66a4591/lib/rpmtag.h#L256)
-			if entry.Info.Type != RPM_INT32_TYPE {
+			if ie.Info.Type != RPM_INT32_TYPE {
 				return nil, xerrors.New("invalid tag digest algo")
 			}
 
-			digestAlgorithm, err := parseInt32(entry.Data)
-			if err != nil {
-				return nil, xerrors.Errorf("failed to parse size: %w", err)
+			var digestAlgo int32
+			reader := bytes.NewReader(ie.Data)
+			if err := binary.Read(reader, binary.BigEndian, &digestAlgo); err != nil {
+				return nil, xerrors.Errorf("failed to read binary digest algo: %w", err)
 			}
-
-			pkgInfo.DigestAlgorithm = DigestAlgorithm(digestAlgorithm)
+			pkgInfo.DigestAlgorithm = DigestAlgorithm(int(digestAlgo))
 		}
 
 	}

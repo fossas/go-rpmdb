@@ -1,9 +1,10 @@
 package bdb
 
 import (
+	"bytes"
 	"encoding/binary"
-	"fmt"
-	"github.com/go-restruct/restruct"
+
+	"golang.org/x/xerrors"
 )
 
 // source: https://github.com/berkeleydb/libdb/blob/5b7b02ae052442626af54c176335b67ecc613a30/src/dbinc/db_page.h#L130
@@ -21,12 +22,12 @@ type HashMetadataPage struct {
 func ParseHashMetadataPage(data []byte) (*HashMetadataPage, error) {
 	var metadata HashMetadataPage
 
-	err := restruct.Unpack(data, binary.LittleEndian, &metadata)
+	err := binary.Read(bytes.NewReader(data), binary.LittleEndian, &metadata)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack HashMetadataPage: %w", err)
+		return nil, xerrors.Errorf("failed to unpack HashMetadataPage: %w", err)
 	}
 
-	return &metadata, nil
+	return &metadata, metadata.validate()
 }
 
 func (p *HashMetadataPage) validate() error {
@@ -36,11 +37,11 @@ func (p *HashMetadataPage) validate() error {
 	}
 
 	if p.Magic != HashMagicNumber {
-		return fmt.Errorf("unexpected DB magic number: %+v", p.Magic)
+		return xerrors.Errorf("unexpected DB magic number: %+v", p.Magic)
 	}
 
 	if p.PageType != HashMetadataPageType {
-		return fmt.Errorf("unexpected page type: %+v", p.PageType)
+		return xerrors.Errorf("unexpected page type: %+v", p.PageType)
 	}
 
 	return nil
