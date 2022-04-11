@@ -12,6 +12,11 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+func run() error {
 	db, err := rpmdb.Open("./Packages")
 	if err != nil {
 		log.Fatal(err)
@@ -29,5 +34,6 @@ func main() {
 		// ...
 	}
 	fmt.Printf("[Total Packages: %d]\n", len(pkgList))
+	return nil
 }
 ```

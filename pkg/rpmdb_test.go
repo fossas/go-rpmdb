@@ -2,9 +2,10 @@ package rpmdb
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"path"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-test/deep"
 )
@@ -45,6 +46,14 @@ func TestPackageList(t *testing.T) {
 		{
 			file:    "testdata/centos7-httpd24/Packages",
 			pkgList: CentOS7Httpd24,
+		},
+		{
+			file:    "testdata/sle15-bci/Packages.db",
+			pkgList: SLE15WithNDB,
+		},
+		{
+			file:    "testdata/fedora35/rpmdb.sqlite",
+			pkgList: Fedora35WithSQLite3,
 		},
 	}
 
