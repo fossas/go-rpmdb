@@ -13,9 +13,13 @@ jobs:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
       uses: actions/checkout@v2
-    - name: golangci-lint
+    - name: Build package
+      run: go build ./pkg
+    - name: Lint
       uses: golangci/golangci-lint-action@v2
       with:
-        version: v1.32
+        version: v1.45.2
     - name: Test
       run: go test ./...
+    - name: Build example executable
+      run: go build ./cmd/rpmdb
