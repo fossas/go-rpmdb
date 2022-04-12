@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"os"
 
-	dbi "github.com/meghfossa/go-rpmdb/pkg/db"
+	dbi "github.com/fossas/go-rpmdb/pkg/db"
 	"golang.org/x/xerrors"
 
 	_ "modernc.org/sqlite"

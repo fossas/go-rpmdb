@@ -1,4 +1,4 @@
-module github.com/meghfossa/go-rpmdb
+module github.com/fossas/go-rpmdb
 
 go 1.17
 
