@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	rpmdb "github.com/fossas/go-rpmdb/pkg"
 	multierror "github.com/hashicorp/go-multierror"
-	rpmdb "github.com/meghfossa/go-rpmdb/pkg"
 )
 
 func main() {

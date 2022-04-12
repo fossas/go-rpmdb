@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	dbi "github.com/meghfossa/go-rpmdb/pkg/db"
+	dbi "github.com/fossas/go-rpmdb/pkg/db"
 	"golang.org/x/xerrors"
 )
 
